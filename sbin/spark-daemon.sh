@@ -27,6 +27,7 @@
 #   SPARK_PID_DIR   The pid files are stored. /tmp by default.
 #   SPARK_IDENT_STRING   A string representing this instance of spark. $USER by default
 #   SPARK_NICENESS The scheduling priority for daemons. Defaults to 0.
+#   SPARK_DAEMON_FOREGROUND If set to a non-blank value, spark daemons run in foreground.
 ##
 
 usage="Usage: spark-daemon.sh [--config <conf-dir>] (start|stop|submit|status) <spark-command> <spark-instance-number> <args...>"
@@ -166,8 +167,12 @@ run_command() {
   # Check if the process has died; in that case we'll tail the log so the user can see
   if [[ ! $(ps -p "$newpid" -o comm=) =~ "java" ]]; then
     echo "failed to launch $command:"
-    tail -2 "$log" | sed 's/^/  /'
+    sed 's/^/  /' $log
     echo "full log in $log"
+  elif [ "$SPARK_DAEMON_FOREGROUND" ]; then
+    # Running in the foreground - display log in realtime
+    tail -f -n +1 $log &
+    wait $newpid
   fi
 }
 
