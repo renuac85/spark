@@ -1,0 +1,14 @@
+Source: apache-spark
+Section: dev
+Priority: optional
+Maintainer: Ubuntu <ubuntu@unknown>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.4
+Homepage: http://spark.apache.org
+#Vcs-Git: git://git.debian.org/collab-maint/spark.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/spark.git;a=summary
+
+Package: apache-spark
+Architecture: all
+Description: Apache Spark
+ A fast and general engine for large-scale data processing
