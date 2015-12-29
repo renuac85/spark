@@ -47,7 +47,7 @@ private[mesos] class MesosExternalShuffleBlockHandler(transportConf: TransportCo
     message match {
       case RegisterDriverParam(appId) =>
         val address = client.getSocketAddress
-        logDebug(s"Received registration request from app $appId (remote address $address).")
+        logInfo(s"Received registration request from app $appId (remote address $address).")
         if (connectedApps.contains(address)) {
           val existingAppId = connectedApps(address)
           if (!existingAppId.equals(appId)) {
