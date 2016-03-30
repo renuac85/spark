@@ -1,3 +1,9 @@
+apache-spark (1.6.1-os1ubuntu1) trusty; urgency=medium
+
+  * New upstream
+
+ -- Ubuntu <ubuntu@ip-10-1-200-197.ec2.internal>  Wed, 30 Mar 2016 13:43:28 +0000
+
 apache-spark (1.6.0~rc4-os1) trusty; urgency=medium
 
   * New upstream
