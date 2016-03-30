@@ -107,8 +107,10 @@ public final class UnsafeInMemorySorter {
    * Free the memory used by pointer array.
    */
   public void free() {
-    consumer.freeArray(array);
-    array = null;
+    if (consumer != null) {
+      consumer.freeArray(array);
+      array = null;
+    }
   }
 
   public void reset() {
@@ -153,7 +155,7 @@ public final class UnsafeInMemorySorter {
    */
   public void insertRecord(long recordPointer, long keyPrefix) {
     if (!hasSpaceForAnotherRecord()) {
-      expandPointerArray(consumer.allocateArray(array.size() * 2));
+      throw new IllegalStateException("There is no space for new record");
     }
     array.set(pos, recordPointer);
     pos++;

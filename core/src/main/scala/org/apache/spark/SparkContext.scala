@@ -830,7 +830,7 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
       minPartitions: Int = defaultMinPartitions): RDD[String] = withScope {
     assertNotStopped()
     hadoopFile(path, classOf[TextInputFormat], classOf[LongWritable], classOf[Text],
-      minPartitions).map(pair => pair._2.toString)
+      minPartitions).map(pair => pair._2.toString).setName(path)
   }
 
   /**
@@ -879,7 +879,7 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
       classOf[Text],
       classOf[Text],
       updateConf,
-      minPartitions).setName(path).map(record => (record._1.toString, record._2.toString))
+      minPartitions).map(record => (record._1.toString, record._2.toString)).setName(path)
   }
 
   /**
@@ -1726,12 +1726,6 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
     Utils.tryLogNonFatalError {
       _executorAllocationManager.foreach(_.stop())
     }
-    if (_dagScheduler != null) {
-      Utils.tryLogNonFatalError {
-        _dagScheduler.stop()
-      }
-      _dagScheduler = null
-    }
     if (_listenerBusStarted) {
       Utils.tryLogNonFatalError {
         listenerBus.stop()
@@ -1740,6 +1734,12 @@ class SparkContext(config: SparkConf) extends Logging with ExecutorAllocationCli
     }
     Utils.tryLogNonFatalError {
       _eventLogger.foreach(_.stop())
+    }
+    if (_dagScheduler != null) {
+      Utils.tryLogNonFatalError {
+        _dagScheduler.stop()
+      }
+      _dagScheduler = null
     }
     if (env != null && _heartbeatReceiver != null) {
       Utils.tryLogNonFatalError {

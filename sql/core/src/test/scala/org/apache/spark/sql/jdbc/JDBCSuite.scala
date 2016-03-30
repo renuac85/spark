@@ -460,6 +460,12 @@ class JDBCSuite extends SparkFunSuite with BeforeAndAfter with SharedSQLContext 
     val Postgres = JdbcDialects.get("jdbc:postgresql://127.0.0.1/db")
     assert(Postgres.getCatalystType(java.sql.Types.OTHER, "json", 1, null) === Some(StringType))
     assert(Postgres.getCatalystType(java.sql.Types.OTHER, "jsonb", 1, null) === Some(StringType))
+    assert(Postgres.getJDBCType(FloatType).map(_.databaseTypeDefinition).get == "FLOAT4")
+    assert(Postgres.getJDBCType(DoubleType).map(_.databaseTypeDefinition).get == "FLOAT8")
+    val errMsg = intercept[IllegalArgumentException] {
+      Postgres.getJDBCType(ByteType)
+    }
+    assert(errMsg.getMessage contains "Unsupported type in postgresql: ByteType")
   }
 
   test("DerbyDialect jdbc type mapping") {

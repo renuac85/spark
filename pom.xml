@@ -26,7 +26,7 @@
   </parent>
   <groupId>org.apache.spark</groupId>
   <artifactId>spark-parent_2.10</artifactId>
-  <version>1.6.0</version>
+  <version>1.6.1</version>
   <packaging>pom</packaging>
   <name>Spark Project Parent POM</name>
   <url>http://spark.apache.org/</url>
@@ -153,7 +153,6 @@
     <avro.version>1.7.7</avro.version>
     <avro.mapred.classifier>hadoop2</avro.mapred.classifier>
     <jets3t.version>0.7.1</jets3t.version>
-    <aws.java.sdk.version>1.9.40</aws.java.sdk.version>
     <aws.kinesis.client.version>1.4.0</aws.kinesis.client.version>
     <!-- the producer is used in tests -->
     <aws.kinesis.producer.version>0.10.1</aws.kinesis.producer.version>
@@ -1134,6 +1133,12 @@
         <artifactId>zookeeper</artifactId>
         <version>${zookeeper.version}</version>
         <scope>${hadoop.deps.scope}</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.jboss.netty</groupId>
+            <artifactId>netty</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
@@ -1854,7 +1859,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.4</version>
+          <version>1.4.1</version>
           <executions>
             <execution>
               <id>enforce-versions</id>
@@ -1869,6 +1874,19 @@
                   <requireJavaVersion>
                     <version>${java.version}</version>
                   </requireJavaVersion>
+                  <bannedDependencies>
+                    <excludes>
+                      <!--
+                        Akka depends on io.netty:netty, which puts classes under the org.jboss.netty
+                        package. This conflicts with the classes in org.jboss.netty:netty
+                        artifact, so we have to ban that artifact here. In Netty 4.x, the classes
+                        are under the io.netty package, so it's fine for us to depend on both
+                        io.netty:netty and io.netty:netty-all.
+                       -->
+                      <exclude>org.jboss.netty</exclude>
+                    </excludes>
+                    <searchTransitive>true</searchTransitive>
+                  </bannedDependencies>
                 </rules>
               </configuration>
             </execution>
@@ -2113,6 +2131,23 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-deploy-plugin</artifactId>
           <version>2.8.2</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>default-cli</id>
+              <goals>
+                 <goal>build-classpath</goal>
+              </goals>
+              <configuration>
+                <!-- This includes dependencies with 'runtime' and 'compile' scopes;
+                     see the docs for includeScope for more details -->
+                <includeScope>runtime</includeScope>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
         <!-- This plugin's configuration is used to store Eclipse m2e settings only. -->
         <!-- It has no influence on the Maven build itself. -->

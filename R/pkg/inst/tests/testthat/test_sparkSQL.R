@@ -494,9 +494,11 @@ test_that("table() returns a new DataFrame", {
   expect_equal(count(tabledf), 3)
   dropTempTable(sqlContext, "table1")
 
+  # nolint start
   # Test base::table is working
   #a <- letters[1:3]
   #expect_equal(class(table(a, sample(a))), "table")
+  # nolint end
 })
 
 test_that("toRDD() returns an RRDD", {
@@ -762,8 +764,10 @@ test_that("sample on a DataFrame", {
   sampled3 <- sample_frac(df, FALSE, 0.1, 0) # set seed for predictable result
   expect_true(count(sampled3) < 3)
 
+  # nolint start
   # Test base::sample is working
   #expect_equal(length(sample(1:12)), 12)
+  # nolint end
 })
 
 test_that("select operators", {
@@ -898,8 +902,21 @@ test_that("test HiveContext", {
   df3 <- sql(hiveCtx, "select * from json2")
   expect_is(df3, "DataFrame")
   expect_equal(count(df3), 3)
-
   unlink(jsonPath2)
+
+  hivetestDataPath <- tempfile(pattern="sparkr-test", fileext=".tmp")
+  invisible(saveAsTable(df, "hivetestbl", path = hivetestDataPath))
+  df4 <- sql(hiveCtx, "select * from hivetestbl")
+  expect_is(df4, "DataFrame")
+  expect_equal(count(df4), 3)
+  unlink(hivetestDataPath)
+
+  parquetDataPath <- tempfile(pattern="sparkr-test", fileext=".tmp")
+  invisible(saveAsTable(df, "parquetest", "parquet", mode="overwrite", path=parquetDataPath))
+  df5 <- sql(hiveCtx, "select * from parquetest")
+  expect_is(df5, "DataFrame")
+  expect_equal(count(df5), 3)
+  unlink(parquetDataPath)
 })
 
 test_that("column operators", {
@@ -1048,8 +1065,8 @@ test_that("string operators", {
   df2 <- createDataFrame(sqlContext, l2)
   expect_equal(collect(select(df2, locate("aa", df2$a)))[1, 1], 1)
   expect_equal(collect(select(df2, locate("aa", df2$a, 1)))[1, 1], 2)
-  expect_equal(collect(select(df2, lpad(df2$a, 8, "#")))[1, 1], "###aaads")
-  expect_equal(collect(select(df2, rpad(df2$a, 8, "#")))[1, 1], "aaads###")
+  expect_equal(collect(select(df2, lpad(df2$a, 8, "#")))[1, 1], "###aaads") # nolint
+  expect_equal(collect(select(df2, rpad(df2$a, 8, "#")))[1, 1], "aaads###") # nolint
 
   l3 <- list(list(a = "a.b.c.d"))
   df3 <- createDataFrame(sqlContext, l3)
@@ -1118,6 +1135,14 @@ test_that("when(), otherwise() and ifelse() on a DataFrame", {
   expect_equal(collect(select(df, when(df$a > 1 & df$b > 2, 1)))[, 1], c(NA, 1))
   expect_equal(collect(select(df, otherwise(when(df$a > 1, 1), 0)))[, 1], c(0, 1))
   expect_equal(collect(select(df, ifelse(df$a > 1 & df$b > 2, 0, 1)))[, 1], c(1, 0))
+})
+
+test_that("when(), otherwise() and ifelse() with column on a DataFrame", {
+  l <- list(list(a = 1, b = 2), list(a = 3, b = 4))
+  df <- createDataFrame(sqlContext, l)
+  expect_equal(collect(select(df, when(df$a > 1 & df$b > 2, lit(1))))[, 1], c(NA, 1))
+  expect_equal(collect(select(df, otherwise(when(df$a > 1, lit(1)), lit(0))))[, 1], c(0, 1))
+  expect_equal(collect(select(df, ifelse(df$a > 1 & df$b > 2, lit(0), lit(1))))[, 1], c(1, 0))
 })
 
 test_that("group by, agg functions", {
@@ -1247,7 +1272,7 @@ test_that("filter() on a DataFrame", {
   expect_equal(count(filtered6), 2)
 
   # Test stats::filter is working
-  #expect_true(is.ts(filter(1:100, rep(1, 3))))
+  #expect_true(is.ts(filter(1:100, rep(1, 3)))) # nolint
 })
 
 test_that("join() and merge() on a DataFrame", {
@@ -1481,6 +1506,27 @@ test_that("read/write Parquet files", {
   unlink(parquetPath4)
 })
 
+test_that("read/write text files", {
+  # Test write.df and read.df
+  df <- read.df(sqlContext, jsonPath, "text")
+  expect_is(df, "DataFrame")
+  expect_equal(colnames(df), c("value"))
+  expect_equal(count(df), 3)
+  textPath <- tempfile(pattern = "textPath", fileext = ".txt")
+  write.df(df, textPath, "text", mode="overwrite")
+
+  # Test write.text and read.text
+  textPath2 <- tempfile(pattern = "textPath2", fileext = ".txt")
+  write.text(df, textPath2)
+  df2 <- read.text(sqlContext, c(textPath, textPath2))
+  expect_is(df2, "DataFrame")
+  expect_equal(colnames(df2), c("value"))
+  expect_equal(count(df2), count(df) * 2)
+
+  unlink(textPath)
+  unlink(textPath2)
+})
+
 test_that("describe() and summarize() on a DataFrame", {
   df <- read.json(sqlContext, jsonPath)
   stats <- describe(df, "age")
@@ -1647,7 +1693,7 @@ test_that("cov() and corr() on a DataFrame", {
   expect_true(abs(result - 1.0) < 1e-12)
 
   # Test stats::cov is working
-  #expect_true(abs(max(cov(swiss)) - 1739.295) < 1e-3)
+  #expect_true(abs(max(cov(swiss)) - 1739.295) < 1e-3) # nolint
 })
 
 test_that("freqItems() on a DataFrame", {
@@ -1760,6 +1806,37 @@ test_that("Method coltypes() to get and set R's data types of a DataFrame", {
                "Length of type vector should match the number of columns for DataFrame")
   expect_error(coltypes(df) <- c("environment", "list"),
                "Only atomic type is supported for column types")
+})
+
+test_that("Method str()", {
+  # Structure of Iris
+  iris2 <- iris
+  colnames(iris2) <- c("Sepal_Length", "Sepal_Width", "Petal_Length", "Petal_Width", "Species")
+  iris2$col <- TRUE
+  irisDF2 <- createDataFrame(sqlContext, iris2)
+
+  out <- capture.output(str(irisDF2))
+  expect_equal(length(out), 7)
+  expect_equal(out[1], "'DataFrame': 6 variables:")
+  expect_equal(out[2], " $ Sepal_Length: num 5.1 4.9 4.7 4.6 5 5.4")
+  expect_equal(out[3], " $ Sepal_Width : num 3.5 3 3.2 3.1 3.6 3.9")
+  expect_equal(out[4], " $ Petal_Length: num 1.4 1.4 1.3 1.5 1.4 1.7")
+  expect_equal(out[5], " $ Petal_Width : num 0.2 0.2 0.2 0.2 0.2 0.4")
+  expect_equal(out[6], paste0(" $ Species     : chr \"setosa\" \"setosa\" \"",
+                              "setosa\" \"setosa\" \"setosa\" \"setosa\""))
+  expect_equal(out[7], " $ col         : logi TRUE TRUE TRUE TRUE TRUE TRUE")
+
+  # A random dataset with many columns. This test is to check str limits
+  # the number of columns. Therefore, it will suffice to check for the
+  # number of returned rows
+  x <- runif(200, 1, 10)
+  df <- data.frame(t(as.matrix(data.frame(x,x,x,x,x,x,x,x,x))))
+  DF <- createDataFrame(sqlContext, df)
+  out <- capture.output(str(DF))
+  expect_equal(length(out), 103)
+
+  # Test utils:::str
+  expect_equal(capture.output(utils:::str(iris)), capture.output(str(iris)))
 })
 
 unlink(parquetPath)

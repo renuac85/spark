@@ -1695,7 +1695,7 @@ on all of the worker nodes, as they will need access to the Hive serialization a
 
 Configuration of Hive is done by placing your `hive-site.xml`, `core-site.xml` (for security configuration),
  `hdfs-site.xml` (for HDFS configuration) file in `conf/`. Please note when running
-the query on a YARN cluster (`cluster` mode), the `datanucleus` jars under the `lib_managed/jars` directory
+the query on a YARN cluster (`cluster` mode), the `datanucleus` jars under the `lib` directory
 and `hive-site.xml` under `conf/` directory need to be available on the driver and all executors launched by the
 YARN cluster. The convenient way to do this is adding them through the `--jars` option and `--file` option of the
 `spark-submit` command.
@@ -1895,9 +1895,7 @@ the Data Sources API. The following options are supported:
   <tr>
     <td><code>driver</code></td>
     <td>
-      The class name of the JDBC driver needed to connect to this URL. This class will be loaded
-      on the master and workers before running an JDBC commands to allow the driver to
-      register itself with the JDBC subsystem.
+      The class name of the JDBC driver to use to connect to this URL.
     </td>
   </tr>
   
@@ -2152,6 +2150,11 @@ options.
      --conf spark.sql.hive.thriftServer.singleSession=true \
      ...
    {% endhighlight %}
+
+ - From Spark 1.6, LongType casts to TimestampType expect seconds instead of microseconds. This
+   change was made to match the behavior of Hive 1.2 for more consistent type casting to TimestampType
+   from numeric types. See [SPARK-11724](https://issues.apache.org/jira/browse/SPARK-11724) for
+   details.
 
 ## Upgrading From Spark SQL 1.4 to 1.5
 
