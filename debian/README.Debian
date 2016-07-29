@@ -1,0 +1,6 @@
+spark for Debian
+----------------
+
+Packaged from the source Spark release using make_distribution.sh
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Thu, 17 Sep 2015 16:15:33 +0000
