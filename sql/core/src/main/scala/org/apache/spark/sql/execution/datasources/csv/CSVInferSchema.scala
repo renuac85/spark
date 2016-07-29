@@ -269,7 +269,8 @@ private[csv] object CSVTypeCast {
           Try(datum.toDouble)
             .getOrElse(NumberFormat.getInstance(Locale.getDefault).parse(datum).doubleValue())
         }
-      case _: BooleanType => datum.toBoolean
+      case _: BooleanType => Try(datum.toBoolean)
+         .getOrElse(if (datum.toInt == 1) true else false)
       case dt: DecimalType =>
         if (datum == options.nullValue && nullable) {
           null

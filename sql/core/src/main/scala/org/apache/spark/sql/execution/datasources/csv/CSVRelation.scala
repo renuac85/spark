@@ -206,7 +206,7 @@ private[sql] class CsvOutputWriter(
   override def write(row: Row): Unit = throw new UnsupportedOperationException("call writeInternal")
 
   override protected[sql] def writeInternal(row: InternalRow): Unit = {
-    csvWriter.writeRow(rowToString(row.toSeq(dataSchema)), records == 0L && params.headerFlag)
+    csvWriter.writeRow(rowToString(row.toSeq(dataSchema)), records == 0L && TaskAttemptContext.getTaskAttemptID.getTaskID.getId && params.headerFlag)
     records += 1
     if (records % FLUSH_BATCH_SIZE == 0) {
       flush()
