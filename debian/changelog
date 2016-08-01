@@ -1,3 +1,9 @@
+apache-spark (2.0.0-os1ubuntu1) trusty; urgency=medium
+
+  * New upstream
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Mon, 01 Aug 2016 12:41:51 +0000
+
 apache-spark (1.6.0~rc4-os1) trusty; urgency=medium
 
   * New upstream
