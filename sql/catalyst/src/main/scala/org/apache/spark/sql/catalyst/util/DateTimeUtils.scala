@@ -135,7 +135,7 @@ object DateTimeUtils {
         Timestamp.valueOf(s)
       } else if (!s.contains('-')) {
         // milliseconds
-        Timestamp(s.toLong)
+        new Timestamp(s.toLong)
       } else {
         Date.valueOf(s)
       }
