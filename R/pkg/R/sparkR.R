@@ -28,14 +28,6 @@ connExists <- function(env) {
   })
 }
 
-#' @rdname sparkR.session.stop
-#' @name sparkR.stop
-#' @export
-#' @note sparkR.stop since 1.4.0
-sparkR.stop <- function() {
-  sparkR.session.stop()
-}
-
 #' Stop the Spark Session and Spark Context
 #'
 #' Stop the Spark Session and Spark Context.
@@ -88,6 +80,14 @@ sparkR.session.stop <- function() {
 
   # Clear jobj maps
   clearJobjs()
+}
+
+#' @rdname sparkR.session.stop
+#' @name sparkR.stop
+#' @export
+#' @note sparkR.stop since 1.4.0
+sparkR.stop <- function() {
+  sparkR.session.stop()
 }
 
 #' (Deprecated) Initialize a new Spark Context
@@ -364,6 +364,23 @@ sparkR.session <- function(
       appName <- paramMap[["spark.app.name"]]
     }
     overrideEnvs(sparkConfigMap, paramMap)
+  }
+  # do not download if it is run in the sparkR shell
+  if (!nzchar(master) || is_master_local(master)) {
+    if (!is_sparkR_shell()) {
+      if (is.na(file.info(sparkHome)$isdir)) {
+        msg <- paste0("Spark not found in SPARK_HOME: ",
+                      sparkHome,
+                      " .\nTo search in the cache directory. ",
+                      "Installation will start if not found.")
+        message(msg)
+        packageLocalDir <- install.spark()
+        sparkHome <- packageLocalDir
+      } else {
+        msg <- paste0("Spark package is found in SPARK_HOME: ", sparkHome)
+        message(msg)
+      }
+    }
   }
 
   if (!exists(".sparkRjsc", envir = .sparkREnv)) {
