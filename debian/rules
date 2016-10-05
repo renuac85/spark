@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+export JAVA_HOME=/usr/lib/jvm/default-java
+export MAVEN_OPTS=-Xmx3200m -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m
+
+%:
+	dh $@ 
+
+override_dh_auto_build:
+	./dev/make-distribution.sh --name os1 -DskipTests -Phive -Phive-thriftserver -Pyarn -Phadoop-2.6 -Dhadoop.version=2.7.1
+

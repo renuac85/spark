@@ -133,6 +133,9 @@ object DateTimeUtils {
       // JDBC escape string
       if (s.contains(' ')) {
         Timestamp.valueOf(s)
+      } else if (!s.contains('-')) {
+        // milliseconds
+        new Timestamp(s.toLong)
       } else {
         Date.valueOf(s)
       }

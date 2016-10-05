@@ -1,0 +1,31 @@
+#!/usr/bin/dh-exec
+#dist/R opt/spark
+dist/conf etc/spark
+dist/data opt/spark
+dist/examples opt/spark
+dist/jars opt/spark
+dist/python opt/spark
+dist/RELEASE opt/spark
+
+dist/bin/beeline opt/spark/bin
+dist/bin/load-spark-env.sh opt/spark/bin
+dist/bin/pyspark opt/spark/bin
+dist/bin/run-example opt/spark/bin
+dist/bin/spark-class opt/spark/bin
+dist/bin/spark-shell opt/spark/bin
+dist/bin/spark-sql opt/spark/bin
+dist/bin/spark-submit opt/spark/bin
+dist/bin/sparkR opt/spark/bin
+
+debian/spark-wrapper => /usr/bin/beeline
+debian/spark-wrapper => /usr/bin/load-spark-env.sh
+debian/spark-wrapper => /usr/bin/pyspark
+debian/spark-wrapper => /usr/bin/run-example
+debian/spark-wrapper => /usr/bin/spark-class
+debian/spark-wrapper => /usr/bin/spark-shell
+debian/spark-wrapper => /usr/bin/spark-sql
+debian/spark-wrapper => /usr/bin/spark-submit
+debian/spark-wrapper => /usr/bin/sparkR
+
+dist/sbin opt/spark
+
