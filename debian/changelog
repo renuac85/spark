@@ -1,3 +1,12 @@
+apache-spark (2.0.1-os2ubuntu1) trusty; urgency=medium
+
+  * Merge in three fixes:
+  * SPARK-17707 (webui hangs)
+  * SPARK-17750 (interval arithmetic fixes)
+  * SPARK-17549 (InMemoryRelation memory usage issues)
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Wed, 05 Sep 2016 12:41:51 +0000
+
 apache-spark (2.0.1-os1ubuntu1) trusty; urgency=medium
 
   * New upstream
