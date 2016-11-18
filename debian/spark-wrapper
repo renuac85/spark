@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# We can't just use a symlink as SPARK_HOME would be incorrect
-
 export SPARK_HOME="${SPARK_HOME:-/opt/spark}"
-
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-exec $SPARK_HOME/${DIR#/usr}/`basename $0` "$@"
+exec $SPARK_HOME/bin/`basename $0` "$@"
 

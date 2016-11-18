@@ -1,6 +1,12 @@
+apache-spark (2.0.2-os3) xenial; urgency=medium
+
+  * alter spark-wrapper setup as newer dh was installing them in a subdirectory
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Thu, 17 Nov 2016 17:24:40 +0000
+
 apache-spark (2.0.2-os2) xenial; urgency=medium
 
-  * Prevent bin wrappers being in subdirectories
+  * add dh-exec build depends
 
  -- Adrian Bridgett <adrian@opensignal.com>  Thu, 17 Nov 2016 16:24:40 +0000
 

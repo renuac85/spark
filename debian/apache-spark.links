@@ -1,1 +1,11 @@
 /etc/spark/conf /opt/spark/conf
+/opt/spark/bin/spark-wrapper /usr/bin/beeline
+/opt/spark/bin/spark-wrapper /usr/bin/load-spark-env.sh
+/opt/spark/bin/spark-wrapper /usr/bin/pyspark
+/opt/spark/bin/spark-wrapper /usr/bin/run-example
+/opt/spark/bin/spark-wrapper /usr/bin/spark-class
+/opt/spark/bin/spark-wrapper /usr/bin/spark-shell
+/opt/spark/bin/spark-wrapper /usr/bin/spark-sql
+/opt/spark/bin/spark-wrapper /usr/bin/spark-submit
+/opt/spark/bin/spark-wrapper /usr/bin/sparkR
+
