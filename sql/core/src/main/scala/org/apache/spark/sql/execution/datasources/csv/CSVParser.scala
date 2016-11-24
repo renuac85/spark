@@ -71,7 +71,7 @@ private[csv] class LineCsvWriter(params: CSVOptions, headers: Seq[String]) exten
   format.setComment(params.comment)
 
   writerSettings.setNullValue(params.nullValue)
-  writerSettings.setEmptyValue(params.nullValue)
+  writerSettings.setEmptyValue(params.emptyValue)
   writerSettings.setSkipEmptyLines(true)
   writerSettings.setQuoteAllFields(params.quoteAll)
   writerSettings.setHeaders(headers: _*)

@@ -293,7 +293,7 @@ class DataFrameReader(OptionUtils):
     @since(2.0)
     def csv(self, path, schema=None, sep=None, encoding=None, quote=None, escape=None,
             comment=None, header=None, inferSchema=None, ignoreLeadingWhiteSpace=None,
-            ignoreTrailingWhiteSpace=None, nullValue=None, nanValue=None, positiveInf=None,
+            ignoreTrailingWhiteSpace=None, nullValue=None, emptyValue=None, nanValue=None, positiveInf=None,
             negativeInf=None, dateFormat=None, timestampFormat=None, maxColumns=None,
             maxCharsPerColumn=None, maxMalformedLogPerPartition=None, mode=None):
         """Loads a CSV file and returns the result as a  :class:`DataFrame`.
@@ -328,6 +328,9 @@ class DataFrameReader(OptionUtils):
                                          the default value, ``false``.
         :param nullValue: sets the string representation of a null value. If None is set, it uses
                           the default value, empty string. Since 2.0.1, this ``nullValue`` param
+                          applies to all supported types including the string type.
+        :param emptyValue: sets the string representation of an empty value. If None is set, it uses
+                          the default value, empty string. Since 2.0.x, this ``emptyValue`` param
                           applies to all supported types including the string type.
         :param nanValue: sets the string representation of a non-number value. If None is set, it
                          uses the default value, ``NaN``.
