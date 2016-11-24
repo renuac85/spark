@@ -370,7 +370,7 @@ class DataFrameReader(OptionUtils):
         self._set_opts(
             schema=schema, sep=sep, encoding=encoding, quote=quote, escape=escape, comment=comment,
             header=header, inferSchema=inferSchema, ignoreLeadingWhiteSpace=ignoreLeadingWhiteSpace,
-            ignoreTrailingWhiteSpace=ignoreTrailingWhiteSpace, nullValue=nullValue,
+            ignoreTrailingWhiteSpace=ignoreTrailingWhiteSpace, nullValue=nullValue, emptyValue=emptyValue,
             nanValue=nanValue, positiveInf=positiveInf, negativeInf=negativeInf,
             dateFormat=dateFormat, timestampFormat=timestampFormat, maxColumns=maxColumns,
             maxCharsPerColumn=maxCharsPerColumn,
@@ -660,7 +660,8 @@ class DataFrameWriter(OptionUtils):
 
     @since(2.0)
     def csv(self, path, mode=None, compression=None, sep=None, quote=None, escape=None,
-            header=None, nullValue=None, emptyValue=None, escapeQuotes=None, quoteAll=None, dateFormat=None,
+            header=None, ignoreLeadingWhiteSpace=None,
+            ignoreTrailingWhiteSpace=None, nullValue=None, emptyValue=None, escapeQuotes=None, quoteAll=None, dateFormat=None,
             timestampFormat=None):
         """Saves the content of the :class:`DataFrame` in CSV format at the specified path.
 
@@ -691,6 +692,12 @@ class DataFrameWriter(OptionUtils):
                           only escaping values containing a quote character.
         :param header: writes the names of columns as the first line. If None is set, it uses
                        the default value, ``false``.
+        :param ignoreLeadingWhiteSpace: defines whether or not leading whitespaces from values
+                                        being read should be skipped. If None is set, it uses
+                                        the default value, ``false``.
+        :param ignoreTrailingWhiteSpace: defines whether or not trailing whitespaces from values
+                                         being read should be skipped. If None is set, it uses
+                                         the default value, ``false``.
         :param nullValue: sets the string representation of a null value. If None is set, it uses
                           the default value, empty string.
         :param emptyValue: sets the string representation of an empty value. If None is set, it uses
@@ -708,7 +715,8 @@ class DataFrameWriter(OptionUtils):
         """
         self.mode(mode)
         self._set_opts(compression=compression, sep=sep, quote=quote, escape=escape, header=header,
-                       nullValue=nullValue, emptyValue=emptyValue, escapeQuotes=escapeQuotes, quoteAll=quoteAll,
+                       ignoreLeadingWhiteSpace=None,
+            ignoreTrailingWhiteSpace=None, nullValue=nullValue, emptyValue=emptyValue, escapeQuotes=escapeQuotes, quoteAll=quoteAll,
                        dateFormat=dateFormat, timestampFormat=timestampFormat)
         self._jwrite.csv(path)
 

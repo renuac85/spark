@@ -69,6 +69,8 @@ private[csv] class LineCsvWriter(params: CSVOptions, headers: Seq[String]) exten
   format.setQuote(params.quote)
   format.setQuoteEscape(params.escape)
   format.setComment(params.comment)
+  writerSettings.setIgnoreLeadingWhitespaces(params.ignoreLeadingWhiteSpaceFlag)
+  writerSettings.setIgnoreTrailingWhitespaces(params.ignoreTrailingWhiteSpaceFlag)
 
   writerSettings.setNullValue(params.nullValue)
   writerSettings.setEmptyValue(params.emptyValue)
