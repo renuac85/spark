@@ -660,7 +660,7 @@ class DataFrameWriter(OptionUtils):
 
     @since(2.0)
     def csv(self, path, mode=None, compression=None, sep=None, quote=None, escape=None,
-            header=None, nullValue=None, escapeQuotes=None, quoteAll=None, dateFormat=None,
+            header=None, nullValue=None, emptyValue=None, escapeQuotes=None, quoteAll=None, dateFormat=None,
             timestampFormat=None):
         """Saves the content of the :class:`DataFrame` in CSV format at the specified path.
 
@@ -693,6 +693,8 @@ class DataFrameWriter(OptionUtils):
                        the default value, ``false``.
         :param nullValue: sets the string representation of a null value. If None is set, it uses
                           the default value, empty string.
+        :param emptyValue: sets the string representation of an empty value. If None is set, it uses
+                          the default value, empty string.
         :param dateFormat: sets the string that indicates a date format. Custom date formats
                            follow the formats at ``java.text.SimpleDateFormat``. This
                            applies to date type. If None is set, it uses the
@@ -706,7 +708,7 @@ class DataFrameWriter(OptionUtils):
         """
         self.mode(mode)
         self._set_opts(compression=compression, sep=sep, quote=quote, escape=escape, header=header,
-                       nullValue=nullValue, escapeQuotes=escapeQuotes, quoteAll=quoteAll,
+                       nullValue=nullValue, emptyValue=emptyValue, escapeQuotes=escapeQuotes, quoteAll=quoteAll,
                        dateFormat=dateFormat, timestampFormat=timestampFormat)
         self._jwrite.csv(path)
 
