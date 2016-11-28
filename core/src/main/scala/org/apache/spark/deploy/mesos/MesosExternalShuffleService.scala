@@ -20,7 +20,7 @@ package org.apache.spark.deploy.mesos
 import java.nio.ByteBuffer
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
-+import scala.collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 import org.apache.spark.{Logging, SecurityManager, SparkConf}
 import org.apache.spark.deploy.ExternalShuffleService
