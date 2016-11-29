@@ -3,7 +3,7 @@ apache-spark (2.0.2-os4) xenial; urgency=medium
   * support emptyValue, ignoreLeadingWhiteSpace, ignoreTrailingWhiteSpace
     to CSVWriteralter
 
- -- Adrian Bridgett <adrian@opensignal.com>  Thu, 29 Nov 2016 1r424:40 +0000
+ -- Adrian Bridgett <adrian@opensignal.com>  Thu, 29 Nov 2016 14:24:40 +0000
 
 apache-spark (2.0.2-os3) xenial; urgency=medium
 
