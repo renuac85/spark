@@ -104,8 +104,7 @@ case class DataSource(
       "org.apache.spark.sql.hive.orc.DefaultSource" -> orc,
       "org.apache.spark.sql.hive.orc" -> orc,
       "org.apache.spark.ml.source.libsvm.DefaultSource" -> libsvm,
-      "org.apache.spark.ml.source.libsvm" -> libsvm,
-      "com.databricks.spark.csv" -> csv
+      "org.apache.spark.ml.source.libsvm" -> libsvm
     )
   }
 
