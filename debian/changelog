@@ -1,0 +1,29 @@
+apache-spark (2.0.1-os1ubuntu1) trusty; urgency=medium
+
+  * New upstream
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Wed, 05 Sep 2016 12:41:51 +0000
+
+apache-spark (1.6.0~rc4-os1) trusty; urgency=medium
+
+  * New upstream
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Thu, 24 Dec 2015 09:33:59 +0000
+
+apache-spark (1.5.1os1-os1) unstable; urgency=medium
+
+  * New upstream, maybe fix failed task killing executor
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Wed, 14 Oct 2015 16:25:27 +0000
+
+apache-spark (1.5.0-os2) unstable; urgency=medium
+
+  * Various fixes
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Fri, 18 Sep 2015 11:44:33 +0000
+
+apache-spark (1.5.0-os1) unstable; urgency=low
+
+  * Initial release
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Thu, 17 Sep 2015 16:15:33 +0000
