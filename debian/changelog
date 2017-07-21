@@ -1,3 +1,18 @@
+apache-spark (2.2.0-os1) xenial; urgency=medium
+
+  * Update to v2.2.0
+  * Drop all code changes
+  * Add mesos, pip, r to build
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Fri, 21 Jul 2017 09:24:40 +0000
+
+apache-spark (2.0.2-os4) xenial; urgency=medium
+
+  * support emptyValue, ignoreLeadingWhiteSpace, ignoreTrailingWhiteSpace
+    to CSVWriteralter
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Thu, 29 Nov 2016 14:24:40 +0000
+
 apache-spark (2.0.2-os3) xenial; urgency=medium
 
   * alter spark-wrapper setup as newer dh was installing them in a subdirectory
