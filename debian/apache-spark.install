@@ -7,6 +7,7 @@ dist/python opt/spark
 dist/RELEASE opt/spark
 
 dist/bin/beeline opt/spark/bin
+dist/bin/find-spark-home opt/spark/bin
 dist/bin/load-spark-env.sh opt/spark/bin
 dist/bin/pyspark opt/spark/bin
 dist/bin/run-example opt/spark/bin
