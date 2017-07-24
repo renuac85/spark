@@ -1,3 +1,9 @@
+apache-spark (2.2.0-os2) xenial; urgency=medium
+
+  * Add find-spark-home
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Mon, 24 Jul 2017 08:07:23 +0000
+
 apache-spark (2.2.0-os1) xenial; urgency=medium
 
   * Update to v2.2.0
