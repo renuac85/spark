@@ -1,3 +1,9 @@
+apache-spark (2.2.0-os3) xenial; urgency=medium
+
+  * Rebuild against hadoop 2.8.2 (SYS-519)
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Mon, 30 Oct 2017 14:42:51 +0000
+
 apache-spark (2.2.0-os2) xenial; urgency=medium
 
   * Add find-spark-home

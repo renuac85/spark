@@ -15,5 +15,5 @@ export MAVEN_OPTS=-Xmx6000m -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m
 
 override_dh_auto_build:
 	./dev/make-distribution.sh --name os1 --pip -DskipTests \
-		-Phive -Phive-thriftserver -Phadoop-2.7 -Dhadoop.version=2.7.3 -Pmesos
+		-Phive -Phive-thriftserver -Phadoop-2.7 -Dhadoop.version=2.8.2 -Pmesos
 
