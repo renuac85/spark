@@ -8,7 +8,7 @@
 export DH_OPTIONS
 
 export JAVA_HOME=/usr/lib/jvm/default-java
-export MAVEN_OPTS=-Xmx6000m -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m
+export MAVEN_OPTS=-Xmx7000m -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m
 
 %:
 	dh $@ 
