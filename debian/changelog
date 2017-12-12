@@ -1,3 +1,9 @@
+apache-spark (2.2.0-os4) xenial; urgency=medium
+
+  * Rebuild with hadoop-provided (SYS-547)
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Mon, 30 Oct 2017 15:27:51 +0000
+
 apache-spark (2.2.0-os3) xenial; urgency=medium
 
   * Rebuild against hadoop 2.8.2 (SYS-519)
