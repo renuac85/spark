@@ -15,22 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.spark.network.shuffle;
+package org.apache.spark.sql.catalyst.expressions
 
-import java.io.File;
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
+import org.apache.spark.sql.types.DataType
 
-/**
- * A manager to create temp block files to reduce the memory usage and also clean temp
- * files when they won't be used any more.
- */
-public interface TempFileManager {
+case class KnowNotNull(child: Expression) extends UnaryExpression {
+  override def nullable: Boolean = false
+  override def dataType: DataType = child.dataType
 
-  /** Create a temp block file. */
-  File createTempFile();
+  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    child.genCode(ctx).copy(isNull = "false")
+  }
 
-  /**
-   * Register a temp file to clean up when it won't be used any more. Return whether the
-   * file is registered successfully. If `false`, the caller should clean up the file by itself.
-   */
-  boolean registerTempFileToClean(File file);
+  override def eval(input: InternalRow): Any = {
+    child.eval(input)
+  }
 }

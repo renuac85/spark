@@ -27,7 +27,7 @@ import org.apache.spark.sql.catalyst.encoders.OuterScopes
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.SubExprUtils._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.objects.{LambdaVariable, MapObjects, NewInstance, UnresolvedMapObjects}
+import org.apache.spark.sql.catalyst.expressions.objects._
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules._
@@ -723,6 +723,10 @@ class Analyzer(
             if findAliases(aggregateExpressions).intersect(conflictingAttributes).nonEmpty =>
           (oldVersion, oldVersion.copy(aggregateExpressions = newAliases(aggregateExpressions)))
 
+        case oldVersion @ FlatMapGroupsInPandas(_, _, output, _)
+            if oldVersion.outputSet.intersect(conflictingAttributes).nonEmpty =>
+          (oldVersion, oldVersion.copy(output = output.map(_.newInstance())))
+
         case oldVersion: Generate
             if oldVersion.producedAttributes.intersect(conflictingAttributes).nonEmpty =>
           val newOutput = oldVersion.generatorOutput.map(_.newInstance())
@@ -1110,7 +1114,8 @@ class Analyzer(
       case sa @ Sort(_, _, AnalysisBarrier(child: Aggregate)) => sa
       case sa @ Sort(_, _, child: Aggregate) => sa
 
-      case s @ Sort(order, _, child) if !s.resolved && child.resolved =>
+      case s @ Sort(order, _, child)
+          if (!s.resolved || s.missingInput.nonEmpty) && child.resolved =>
         val (newOrder, newChild) = resolveExprsAndAddMissingAttrs(order, child)
         val ordering = newOrder.map(_.asInstanceOf[SortOrder])
         if (child.output == newChild.output) {
@@ -1121,7 +1126,7 @@ class Analyzer(
           Project(child.output, newSort)
         }
 
-      case f @ Filter(cond, child) if !f.resolved && child.resolved =>
+      case f @ Filter(cond, child) if (!f.resolved || f.missingInput.nonEmpty) && child.resolved =>
         val (newCond, newChild) = resolveExprsAndAddMissingAttrs(Seq(cond), child)
         if (child.output == newChild.output) {
           f.copy(condition = newCond.head)
@@ -1132,10 +1137,17 @@ class Analyzer(
         }
     }
 
+    /**
+     * This method tries to resolve expressions and find missing attributes recursively. Specially,
+     * when the expressions used in `Sort` or `Filter` contain unresolved attributes or resolved
+     * attributes which are missed from child output. This method tries to find the missing
+     * attributes out and add into the projection.
+     */
     private def resolveExprsAndAddMissingAttrs(
         exprs: Seq[Expression], plan: LogicalPlan): (Seq[Expression], LogicalPlan) = {
-      if (exprs.forall(_.resolved)) {
-        // All given expressions are resolved, no need to continue anymore.
+      // Missing attributes can be unresolved attributes or resolved attributes which are not in
+      // the output attributes of the plan.
+      if (exprs.forall(e => e.resolved && e.references.subsetOf(plan.outputSet))) {
         (exprs, plan)
       } else {
         plan match {
@@ -1146,15 +1158,19 @@ class Analyzer(
             (newExprs, AnalysisBarrier(newChild))
 
           case p: Project =>
+            // Resolving expressions against current plan.
             val maybeResolvedExprs = exprs.map(resolveExpression(_, p))
+            // Recursively resolving expressions on the child of current plan.
             val (newExprs, newChild) = resolveExprsAndAddMissingAttrs(maybeResolvedExprs, p.child)
-            val missingAttrs = AttributeSet(newExprs) -- AttributeSet(maybeResolvedExprs)
+            // If some attributes used by expressions are resolvable only on the rewritten child
+            // plan, we need to add them into original projection.
+            val missingAttrs = (AttributeSet(newExprs) -- p.outputSet).intersect(newChild.outputSet)
             (newExprs, Project(p.projectList ++ missingAttrs, newChild))
 
           case a @ Aggregate(groupExprs, aggExprs, child) =>
             val maybeResolvedExprs = exprs.map(resolveExpression(_, a))
             val (newExprs, newChild) = resolveExprsAndAddMissingAttrs(maybeResolvedExprs, child)
-            val missingAttrs = AttributeSet(newExprs) -- AttributeSet(maybeResolvedExprs)
+            val missingAttrs = (AttributeSet(newExprs) -- a.outputSet).intersect(newChild.outputSet)
             if (missingAttrs.forall(attr => groupExprs.exists(_.semanticEquals(attr)))) {
               // All the missing attributes are grouping expressions, valid case.
               (newExprs, a.copy(aggregateExpressions = aggExprs ++ missingAttrs, child = newChild))
@@ -1474,7 +1490,11 @@ class Analyzer(
 
         // Try resolving the ordering as though it is in the aggregate clause.
         try {
-          val unresolvedSortOrders = sortOrder.filter(s => !s.resolved || containsAggregate(s))
+          // If a sort order is unresolved, containing references not in aggregate, or containing
+          // `AggregateExpression`, we need to push down it to the underlying aggregate operator.
+          val unresolvedSortOrders = sortOrder.filter { s =>
+            !s.resolved || !s.references.subsetOf(aggregate.outputSet) || containsAggregate(s)
+          }
           val aliasedOrdering =
             unresolvedSortOrders.map(o => Alias(o.child, "aggOrder")())
           val aggregatedOrdering = aggregate.copy(aggregateExpressions = aliasedOrdering)
@@ -1684,6 +1704,7 @@ class Analyzer(
 
     def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
       case p if !p.resolved => p // Skip unresolved nodes.
+      case ab: AnalysisBarrier => apply(ab.child)
       case p: LogicalPlan if p.resolved =>
         val childrenOutput = p.children.flatMap(c => c.output).groupBy(_.exprId).flatMap {
           case (exprId, attributes) =>
@@ -2026,14 +2047,24 @@ class Analyzer(
           val parameterTypes = ScalaReflection.getParameterTypes(func)
           assert(parameterTypes.length == inputs.length)
 
+          // TODO: skip null handling for not-nullable primitive inputs after we can completely
+          // trust the `nullable` information.
+          // (cls, expr) => cls.isPrimitive && expr.nullable
+          val needsNullCheck = (cls: Class[_], expr: Expression) =>
+            cls.isPrimitive && !expr.isInstanceOf[KnowNotNull]
           val inputsNullCheck = parameterTypes.zip(inputs)
-            // TODO: skip null handling for not-nullable primitive inputs after we can completely
-            // trust the `nullable` information.
-            // .filter { case (cls, expr) => cls.isPrimitive && expr.nullable }
-            .filter { case (cls, _) => cls.isPrimitive }
+            .filter { case (cls, expr) => needsNullCheck(cls, expr) }
             .map { case (_, expr) => IsNull(expr) }
             .reduceLeftOption[Expression]((e1, e2) => Or(e1, e2))
-          inputsNullCheck.map(If(_, Literal.create(null, udf.dataType), udf)).getOrElse(udf)
+          // Once we add an `If` check above the udf, it is safe to mark those checked inputs
+          // as not nullable (i.e., wrap them with `KnownNotNull`), because the null-returning
+          // branch of `If` will be called if any of these checked inputs is null. Thus we can
+          // prevent this rule from being applied repeatedly.
+          val newInputs = parameterTypes.zip(inputs).map{ case (cls, expr) =>
+            if (needsNullCheck(cls, expr)) KnowNotNull(expr) else expr }
+          inputsNullCheck
+            .map(If(_, Literal.create(null, udf.dataType), udf.copy(children = newInputs)))
+            .getOrElse(udf)
       }
     }
   }

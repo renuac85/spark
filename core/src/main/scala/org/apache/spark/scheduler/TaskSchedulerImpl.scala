@@ -19,7 +19,7 @@ package org.apache.spark.scheduler
 
 import java.nio.ByteBuffer
 import java.util.{Locale, Timer, TimerTask}
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import java.util.concurrent.atomic.AtomicLong
 
 import scala.collection.Set
@@ -42,7 +42,7 @@ import org.apache.spark.util.{AccumulatorV2, ThreadUtils, Utils}
  * up to launch speculative tasks, etc.
  *
  * Clients should first call initialize() and start(), then submit task sets through the
- * runTasks method.
+ * submitTasks method.
  *
  * THREADING: [[SchedulerBackend]]s and task-submitting clients can call this class from multiple
  * threads, so it needs locks in public API methods to maintain its state. In addition, some
@@ -62,7 +62,7 @@ private[spark] class TaskSchedulerImpl(
     this(sc, sc.conf.get(config.MAX_TASK_FAILURES))
   }
 
-  // Lazily initializing blackListTrackOpt to avoid getting empty ExecutorAllocationClient,
+  // Lazily initializing blacklistTrackerOpt to avoid getting empty ExecutorAllocationClient,
   // because ExecutorAllocationClient is created after this TaskSchedulerImpl.
   private[scheduler] lazy val blacklistTrackerOpt = maybeCreateBlacklistTracker(sc)
 
@@ -90,7 +90,7 @@ private[spark] class TaskSchedulerImpl(
   private val taskSetsByStageIdAndAttempt = new HashMap[Int, HashMap[Int, TaskSetManager]]
 
   // Protected by `this`
-  private[scheduler] val taskIdToTaskSetManager = new HashMap[Long, TaskSetManager]
+  private[scheduler] val taskIdToTaskSetManager = new ConcurrentHashMap[Long, TaskSetManager]
   val taskIdToExecutorId = new HashMap[Long, String]
 
   @volatile private var hasReceivedTask = false
@@ -228,7 +228,7 @@ private[spark] class TaskSchedulerImpl(
         // 1. The task set manager has been created and some tasks have been scheduled.
         //    In this case, send a kill signal to the executors to kill the task and then abort
         //    the stage.
-        // 2. The task set manager has been created but no tasks has been scheduled. In this case,
+        // 2. The task set manager has been created but no tasks have been scheduled. In this case,
         //    simply abort the stage.
         tsm.runningTasksSet.foreach { tid =>
             taskIdToExecutorId.get(tid).foreach(execId =>
@@ -286,7 +286,7 @@ private[spark] class TaskSchedulerImpl(
           for (task <- taskSet.resourceOffer(execId, host, maxLocality)) {
             tasks(i) += task
             val tid = task.taskId
-            taskIdToTaskSetManager(tid) = taskSet
+            taskIdToTaskSetManager.put(tid, taskSet)
             taskIdToExecutorId(tid) = execId
             executorIdToRunningTaskIds(execId).add(tid)
             availableCpus(i) -= CPUS_PER_TASK
@@ -392,7 +392,7 @@ private[spark] class TaskSchedulerImpl(
     var reason: Option[ExecutorLossReason] = None
     synchronized {
       try {
-        taskIdToTaskSetManager.get(tid) match {
+        Option(taskIdToTaskSetManager.get(tid)) match {
           case Some(taskSet) =>
             if (state == TaskState.LOST) {
               // TaskState.LOST is only used by the deprecated Mesos fine-grained scheduling mode,
@@ -444,10 +444,10 @@ private[spark] class TaskSchedulerImpl(
       accumUpdates: Array[(Long, Seq[AccumulatorV2[_, _]])],
       blockManagerId: BlockManagerId): Boolean = {
     // (taskId, stageId, stageAttemptId, accumUpdates)
-    val accumUpdatesWithTaskIds: Array[(Long, Int, Int, Seq[AccumulableInfo])] = synchronized {
+    val accumUpdatesWithTaskIds: Array[(Long, Int, Int, Seq[AccumulableInfo])] = {
       accumUpdates.flatMap { case (id, updates) =>
         val accInfos = updates.map(acc => acc.toInfo(Some(acc.value), None))
-        taskIdToTaskSetManager.get(id).map { taskSetMgr =>
+        Option(taskIdToTaskSetManager.get(id)).map { taskSetMgr =>
           (id, taskSetMgr.stageId, taskSetMgr.taskSet.stageAttemptId, accInfos)
         }
       }
@@ -694,12 +694,15 @@ private[spark] class TaskSchedulerImpl(
    *
    * After stage failure and retry, there may be multiple TaskSetManagers for the stage.
    * If an earlier attempt of a stage completes a task, we should ensure that the later attempts
-   * do not also submit those same tasks.  That also means that a task completion from an  earlier
+   * do not also submit those same tasks.  That also means that a task completion from an earlier
    * attempt can lead to the entire stage getting marked as successful.
    */
-  private[scheduler] def markPartitionCompletedInAllTaskSets(stageId: Int, partitionId: Int) = {
+  private[scheduler] def markPartitionCompletedInAllTaskSets(
+      stageId: Int,
+      partitionId: Int,
+      taskInfo: TaskInfo) = {
     taskSetsByStageIdAndAttempt.getOrElse(stageId, Map()).values.foreach { tsm =>
-      tsm.markPartitionCompleted(partitionId)
+      tsm.markPartitionCompleted(partitionId, taskInfo)
     }
   }
 

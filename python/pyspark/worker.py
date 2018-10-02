@@ -27,14 +27,15 @@ import traceback
 
 from pyspark.accumulators import _accumulatorRegistry
 from pyspark.broadcast import Broadcast, _broadcastRegistry
-from pyspark.java_gateway import do_server_auth
+from pyspark.java_gateway import local_connect_and_auth
 from pyspark.taskcontext import TaskContext
 from pyspark.files import SparkFiles
 from pyspark.rdd import PythonEvalType
-from pyspark.serializers import write_with_length, write_int, read_long, \
+from pyspark.serializers import write_with_length, write_int, read_long, read_bool, \
     write_long, read_int, SpecialLengths, UTF8Deserializer, PickleSerializer, \
     BatchedSerializer, ArrowStreamPandasSerializer
 from pyspark.sql.types import to_arrow_type
+from pyspark.util import fail_on_stopiteration
 from pyspark import shuffle
 
 pickleSer = PickleSerializer()
@@ -122,13 +123,17 @@ def read_single_udf(pickleSer, infile, eval_type):
         else:
             row_func = chain(row_func, f)
 
+    # make sure StopIteration's raised in the user code are not ignored
+    # when they are processed in a for loop, raise them as RuntimeError's instead
+    func = fail_on_stopiteration(row_func)
+
     # the last returnType will be the return type of UDF
     if eval_type == PythonEvalType.SQL_SCALAR_PANDAS_UDF:
-        return arg_offsets, wrap_scalar_pandas_udf(row_func, return_type)
+        return arg_offsets, wrap_scalar_pandas_udf(func, return_type)
     elif eval_type == PythonEvalType.SQL_GROUPED_MAP_PANDAS_UDF:
-        return arg_offsets, wrap_grouped_map_pandas_udf(row_func, return_type)
+        return arg_offsets, wrap_grouped_map_pandas_udf(func, return_type)
     else:
-        return arg_offsets, wrap_udf(row_func, return_type)
+        return arg_offsets, wrap_udf(func, return_type)
 
 
 def read_udfs(pickleSer, infile, eval_type):
@@ -201,15 +206,33 @@ def main(infile, outfile):
             importlib.invalidate_caches()
 
         # fetch names and values of broadcast variables
+        needs_broadcast_decryption_server = read_bool(infile)
         num_broadcast_variables = read_int(infile)
+        if needs_broadcast_decryption_server:
+            # read the decrypted data from a server in the jvm
+            port = read_int(infile)
+            auth_secret = utf8_deserializer.loads(infile)
+            (broadcast_sock_file, _) = local_connect_and_auth(port, auth_secret)
+
         for _ in range(num_broadcast_variables):
             bid = read_long(infile)
             if bid >= 0:
-                path = utf8_deserializer.loads(infile)
-                _broadcastRegistry[bid] = Broadcast(path=path)
+                if needs_broadcast_decryption_server:
+                    read_bid = read_long(broadcast_sock_file)
+                    assert(read_bid == bid)
+                    _broadcastRegistry[bid] = \
+                        Broadcast(sock_file=broadcast_sock_file)
+                else:
+                    path = utf8_deserializer.loads(infile)
+                    _broadcastRegistry[bid] = Broadcast(path=path)
+
             else:
                 bid = - bid - 1
                 _broadcastRegistry.pop(bid)
+
+        if needs_broadcast_decryption_server:
+            broadcast_sock_file.write(b'1')
+            broadcast_sock_file.close()
 
         _accumulatorRegistry.clear()
         eval_type = read_int(infile)
@@ -264,8 +287,5 @@ if __name__ == '__main__':
     # Read information about how to connect back to the JVM from the environment.
     java_port = int(os.environ["PYTHON_WORKER_FACTORY_PORT"])
     auth_secret = os.environ["PYTHON_WORKER_FACTORY_SECRET"]
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(("127.0.0.1", java_port))
-    sock_file = sock.makefile("rwb", 65536)
-    do_server_auth(sock_file, auth_secret)
+    (sock_file, _) = local_connect_and_auth(java_port, auth_secret)
     main(sock_file, sock_file)

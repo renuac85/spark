@@ -853,22 +853,6 @@ class SQLTests(ReusedSQLTestCase):
         self.assertEqual(f, f_.func)
         self.assertEqual(return_type, f_.returnType)
 
-    def test_stopiteration_in_udf(self):
-        # test for SPARK-23754
-        from pyspark.sql.functions import udf
-        from py4j.protocol import Py4JJavaError
-
-        def foo(x):
-            raise StopIteration()
-
-        with self.assertRaises(Py4JJavaError) as cm:
-            self.spark.range(0, 1000).withColumn('v', udf(foo)('id')).show()
-
-        self.assertIn(
-            "Caught StopIteration thrown from user's code; failing the task",
-            cm.exception.java_exception.toString()
-        )
-
     def test_validate_column_types(self):
         from pyspark.sql.functions import udf, to_json
         from pyspark.sql.column import _to_java_column
@@ -3917,6 +3901,44 @@ class PandasUDFTests(ReusedSQLTestCase):
                 def foo(k, v):
                     return k
 
+    def test_stopiteration_in_udf(self):
+        from pyspark.sql.functions import udf, pandas_udf, PandasUDFType
+        from py4j.protocol import Py4JJavaError
+
+        def foo(x):
+            raise StopIteration()
+
+        def foofoo(x, y):
+            raise StopIteration()
+
+        exc_message = "Caught StopIteration thrown from user's code; failing the task"
+        df = self.spark.range(0, 100)
+
+        # plain udf (test for SPARK-23754)
+        self.assertRaisesRegexp(
+            Py4JJavaError,
+            exc_message,
+            df.withColumn('v', udf(foo)('id')).collect
+        )
+
+        # pandas scalar udf
+        self.assertRaisesRegexp(
+            Py4JJavaError,
+            exc_message,
+            df.withColumn(
+                'v', pandas_udf(foo, 'double', PandasUDFType.SCALAR)('id')
+            ).collect
+        )
+
+        # pandas grouped map
+        self.assertRaisesRegexp(
+            Py4JJavaError,
+            exc_message,
+            df.groupBy('id').apply(
+                pandas_udf(foo, df.schema, PandasUDFType.GROUPED_MAP)
+            ).collect
+        )
+
 
 @unittest.skipIf(
     not _have_pandas or not _have_pyarrow,
@@ -4668,6 +4690,22 @@ class GroupedMapPandasUDFTests(ReusedSQLTestCase):
         foo_udf = pandas_udf(lambda pdf: pdf, 'time timestamp', PandasUDFType.GROUPED_MAP)
         result = df.groupby('time').apply(foo_udf).sort('time')
         self.assertPandasEqual(df.toPandas(), result.toPandas())
+
+    def test_self_join_with_pandas(self):
+        import pyspark.sql.functions as F
+
+        @F.pandas_udf('key long, col string', F.PandasUDFType.GROUPED_MAP)
+        def dummy_pandas_udf(df):
+            return df[['key', 'col']]
+
+        df = self.spark.createDataFrame([Row(key=1, col='A'), Row(key=1, col='B'),
+                                         Row(key=2, col='C')])
+        dfWithPandas = df.groupBy('key').apply(dummy_pandas_udf)
+
+        # this was throwing an AnalysisException before SPARK-24208
+        res = dfWithPandas.alias('temp0').join(dfWithPandas.alias('temp1'),
+                                               F.col('temp0.key') == F.col('temp1.key'))
+        self.assertEquals(res.count(), 5)
 
 
 if __name__ == "__main__":

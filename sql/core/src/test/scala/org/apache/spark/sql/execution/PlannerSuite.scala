@@ -69,6 +69,27 @@ class PlannerSuite extends SharedSQLContext {
     testPartialAggregationPlan(query)
   }
 
+  test("mixed aggregates with same distinct columns") {
+    def assertNoExpand(plan: SparkPlan): Unit = {
+      assert(plan.collect { case e: ExpandExec => e }.isEmpty)
+    }
+
+    withTempView("v") {
+      Seq((1, 1.0, 1.0), (1, 2.0, 2.0)).toDF("i", "j", "k").createTempView("v")
+      // one distinct column
+      val query1 = sql("SELECT sum(DISTINCT j), max(DISTINCT j) FROM v GROUP BY i")
+      assertNoExpand(query1.queryExecution.executedPlan)
+
+      // 2 distinct columns
+      val query2 = sql("SELECT corr(DISTINCT j, k), count(DISTINCT j, k) FROM v GROUP BY i")
+      assertNoExpand(query2.queryExecution.executedPlan)
+
+      // 2 distinct columns with different order
+      val query3 = sql("SELECT corr(DISTINCT j, k), count(DISTINCT k, j) FROM v GROUP BY i")
+      assertNoExpand(query3.queryExecution.executedPlan)
+    }
+  }
+
   test("sizeInBytes estimation of limit operator for broadcast hash join optimization") {
     def checkPlan(fieldTypes: Seq[DataType]): Unit = {
       withTempView("testLimit") {
@@ -607,6 +628,23 @@ class PlannerSuite extends SharedSQLContext {
       childPlan = DummySparkPlan(outputOrdering = Seq(orderingA)),
       requiredOrdering = Seq(orderingA, orderingB),
       shouldHaveSort = true)
+  }
+
+  test("SPARK-24495: EnsureRequirements can return wrong plan when reusing the same key in join") {
+    val plan1 = DummySparkPlan(outputOrdering = Seq(orderingA),
+      outputPartitioning = HashPartitioning(exprA :: exprA :: Nil, 5))
+    val plan2 = DummySparkPlan(outputOrdering = Seq(orderingB),
+      outputPartitioning = HashPartitioning(exprB :: Nil, 5))
+    val smjExec = SortMergeJoinExec(
+      exprA :: exprA :: Nil, exprB :: exprC :: Nil, Inner, None, plan1, plan2)
+
+    val outputPlan = EnsureRequirements(spark.sessionState.conf).apply(smjExec)
+    outputPlan match {
+      case SortMergeJoinExec(leftKeys, rightKeys, _, _, _, _) =>
+        assert(leftKeys == Seq(exprA, exprA))
+        assert(rightKeys == Seq(exprB, exprC))
+      case _ => fail()
+    }
   }
 }
 
