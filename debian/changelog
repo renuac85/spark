@@ -1,3 +1,9 @@
+apache-spark (2.3.2-os1) xenial; urgency=medium
+
+  * Spark 2.3.2 (SYS-925)
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Mon, 30 Oct 2017 15:27:51 +0000
+
 apache-spark (2.3.1-os1) xenial; urgency=medium
 
   * Spark 2.3.1 (SYS-870)
