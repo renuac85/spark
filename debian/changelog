@@ -1,3 +1,9 @@
+apache-spark (2.4.0-os2) xenial; urgency=medium
+
+  * Spark 2.4.0. Rebuild with executable spark-wrapper
+
+ -- Adrian Bridgett <adrian@opensignal.com>  Fri, 22 Mar 2019 15:36:00 +0100
+
 apache-spark (2.4.0-os1) xenial; urgency=medium
 
   * Spark 2.4.0 (SYS-1123)
