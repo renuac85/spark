@@ -1,3 +1,9 @@
+apache-spark (2.4.4-os2) xenial; urgency=medium
+
+  * Spark 2.4.4 (SYS-1409)
+
+ -- Joseph Harris <joe@opensignal.com>  Thu, 7 Nov 2019 12:00:00 +0100
+
 apache-spark (2.4.4-os1) xenial; urgency=medium
 
   * Spark 2.4.4 (SYS-1409)

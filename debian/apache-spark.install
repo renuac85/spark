@@ -4,9 +4,11 @@ dist/data opt/spark
 dist/examples opt/spark
 dist/jars opt/spark
 dist/python opt/spark
+dist/kubernetes opt/spark
 dist/RELEASE opt/spark
 
 dist/bin/beeline opt/spark/bin
+dist/bin/docker-image-tool.sh opt/spark/bin
 dist/bin/find-spark-home opt/spark/bin
 dist/bin/load-spark-env.sh opt/spark/bin
 dist/bin/pyspark opt/spark/bin
