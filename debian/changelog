@@ -1,3 +1,15 @@
+apache-spark (2.4.6-os1) xenial; urgency=medium
+
+  * Spark 2.4.6 (SYS-2001)
+
+ -- Joseph Harris <joe@opensignal.com>  Mon, 30 Nov 2020 12:00:00 +0100
+
+apache-spark (2.4.5-os1) xenial; urgency=medium
+
+  * Spark 2.4.5 (SYS-2001)
+
+ -- Joseph Harris <joe@opensignal.com>  Thu, 26 Nov 2020 12:00:00 +0100
+
 apache-spark (2.4.4-os2) xenial; urgency=medium
 
   * Spark 2.4.4 (SYS-1409)
