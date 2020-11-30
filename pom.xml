@@ -26,7 +26,7 @@
   </parent>
   <groupId>org.apache.spark</groupId>
   <artifactId>spark-parent_2.11</artifactId>
-  <version>2.4.5</version>
+  <version>2.4.6</version>
   <packaging>pom</packaging>
   <name>Spark Project Parent POM</name>
   <url>http://spark.apache.org/</url>
@@ -144,7 +144,7 @@
     <avro.mapred.classifier>hadoop2</avro.mapred.classifier>
     <aws.kinesis.client.version>1.12.0</aws.kinesis.client.version>
     <!-- Should be consistent with Kinesis client dependency -->
-    <aws.java.sdk.version>1.11.271</aws.java.sdk.version>
+    <aws.java.sdk.version>1.11.655</aws.java.sdk.version>
     <!-- the producer is used in tests -->
     <aws.kinesis.producer.version>0.12.8</aws.kinesis.producer.version>
     <!--  org.apache.httpcomponents/httpclient-->
@@ -161,7 +161,7 @@
     <fasterxml.jackson.version>2.6.7</fasterxml.jackson.version>
     <fasterxml.jackson-module-scala.version>2.6.7.1</fasterxml.jackson-module-scala.version>
     <fasterxml.jackson.databind.version>2.6.7.3</fasterxml.jackson.databind.version>
-    <snappy.version>1.1.7.3</snappy.version>
+    <snappy.version>1.1.7.5</snappy.version>
     <netlib.java.version>1.1.2</netlib.java.version>
     <calcite.version>1.2.0-incubating</calcite.version>
     <commons-codec.version>1.10</commons-codec.version>
@@ -171,7 +171,7 @@
     <!-- org.apache.commons/commons-lang3/-->
     <commons-lang3.version>3.5</commons-lang3.version>
     <datanucleus-core.version>3.2.10</datanucleus-core.version>
-    <janino.version>3.0.9</janino.version>
+    <janino.version>3.0.16</janino.version>
     <jersey.version>2.22.2</jersey.version>
     <joda.version>2.9.3</joda.version>
     <jodd.version>3.5.2</jodd.version>
@@ -237,7 +237,7 @@
         See https://storage-download.googleapis.com/maven-central/index.html
       -->
       <name>GCS Maven Central mirror</name>
-      <url>https://maven-central.storage-download.googleapis.com/repos/central/data/</url>
+      <url>https://maven-central.storage-download.googleapis.com/maven2/</url>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -268,7 +268,7 @@
         See https://storage-download.googleapis.com/maven-central/index.html
       -->
       <name>GCS Maven Central mirror</name>
-      <url>https://maven-central.storage-download.googleapis.com/repos/central/data/</url>
+      <url>https://maven-central.storage-download.googleapis.com/maven2/</url>
       <releases>
         <enabled>true</enabled>
       </releases>
@@ -622,7 +622,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.1.42.Final</version>
+        <version>4.1.47.Final</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
