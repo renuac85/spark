@@ -1,3 +1,9 @@
+apache-spark3 (3.4.0-os1) xenial; urgency=medium
+
+  * Update to v3.4.0
+
+ -- Joe Harris <joe@opensignal.com>  Wed, 16 Nov 2021 16:24:40 +0000
+
 apache-spark3 (3.2.1-os1) xenial; urgency=medium
 
   * Spark 3.2.1 (SYS-2001)

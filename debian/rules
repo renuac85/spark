@@ -7,13 +7,14 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
-export JAVA_HOME=/usr/lib/jvm/default-java
-export MAVEN_OPTS=-Xmx14g -XX:MaxPermSize=1024M -XX:ReservedCodeCacheSize=1024m
+#export JAVA_HOME=/usr/lib/jvm/default-java
+export MAVEN_OPTS=-Xmx14g -XX:ReservedCodeCacheSize=1024m
+# export MAVEN_OPTS=-Xmx14g -XX:MaxPermSize=1024M -XX:ReservedCodeCacheSize=1024m
 
 %:
 	dh $@
 
 override_dh_auto_build:
 	./dev/make-distribution.sh --name os1 --pip -DskipTests \
-               -Phive -Pkubernetes -Phive-thriftserver -Phadoop-3.2 -Phadoop-provided -Pmesos -Phadoop-cloud
+               -Phive -Pkubernetes -Phive-thriftserver -Phadoop-3 -Phadoop-provided -Pmesos -Phadoop-cloud
 
