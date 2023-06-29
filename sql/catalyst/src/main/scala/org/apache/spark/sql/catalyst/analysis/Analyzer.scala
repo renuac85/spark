@@ -313,7 +313,7 @@ class Analyzer(override val catalogManager: CatalogManager) extends RuleExecutor
       TimeWindowing ::
       SessionWindowing ::
       ResolveWindowTime ::
-      ResolveDefaultColumns(v1SessionCatalog) ::
+      ResolveDefaultColumns(ResolveRelations.resolveRelationOrTempView) ::
       ResolveInlineTables ::
       ResolveLambdaVariables ::
       ResolveTimeZone ::
@@ -608,31 +608,22 @@ class Analyzer(override val catalogManager: CatalogManager) extends RuleExecutor
         aggregations: Seq[NamedExpression],
         groupByAliases: Seq[Alias],
         groupingAttrs: Seq[Expression],
-        gid: Attribute): Seq[NamedExpression] = aggregations.map { agg =>
-      // collect all the found AggregateExpression, so we can check an expression is part of
-      // any AggregateExpression or not.
-      val aggsBuffer = ArrayBuffer[Expression]()
-      // Returns whether the expression belongs to any expressions in `aggsBuffer` or not.
-      def isPartOfAggregation(e: Expression): Boolean = {
-        aggsBuffer.exists(a => a.exists(_ eq e))
-      }
-      replaceGroupingFunc(agg, groupByExprs, gid).transformDown {
-        // AggregateExpression should be computed on the unmodified value of its argument
-        // expressions, so we should not replace any references to grouping expression
-        // inside it.
-        case e if AggregateExpression.isAggregate(e) =>
-          aggsBuffer += e
-          e
-        case e if isPartOfAggregation(e) => e
+        gid: Attribute): Seq[NamedExpression] = {
+      def replaceExprs(e: Expression): Expression = e match {
+        case e if AggregateExpression.isAggregate(e) => e
         case e =>
           // Replace expression by expand output attribute.
           val index = groupByAliases.indexWhere(_.child.semanticEquals(e))
           if (index == -1) {
-            e
+            e.mapChildren(replaceExprs)
           } else {
             groupingAttrs(index)
           }
-      }.asInstanceOf[NamedExpression]
+      }
+      aggregations
+        .map(replaceGroupingFunc(_, groupByExprs, gid))
+        .map(replaceExprs)
+        .map(_.asInstanceOf[NamedExpression])
     }
 
     /*
@@ -1278,6 +1269,11 @@ class Analyzer(override val catalogManager: CatalogManager) extends RuleExecutor
           case _ => None
         }
       }
+    }
+
+    /** Consumes an unresolved relation and resolves it to a v1 or v2 relation or temporary view. */
+    def resolveRelationOrTempView(u: UnresolvedRelation): LogicalPlan = {
+      EliminateSubqueryAliases(resolveRelation(u).getOrElse(u))
     }
   }
 
@@ -2426,7 +2422,7 @@ class Analyzer(override val catalogManager: CatalogManager) extends RuleExecutor
      */
     private def resolveSubQueries(plan: LogicalPlan, outer: LogicalPlan): LogicalPlan = {
       plan.transformAllExpressionsWithPruning(_.containsPattern(PLAN_EXPRESSION), ruleId) {
-        case s @ ScalarSubquery(sub, _, exprId, _, _) if !sub.resolved =>
+        case s @ ScalarSubquery(sub, _, exprId, _, _, _) if !sub.resolved =>
           resolveSubQuery(s, outer)(ScalarSubquery(_, _, exprId))
         case e @ Exists(sub, _, exprId, _, _) if !sub.resolved =>
           resolveSubQuery(e, outer)(Exists(_, _, exprId))
@@ -3465,18 +3461,21 @@ class Analyzer(override val catalogManager: CatalogManager) extends RuleExecutor
     // the output list looks like: join keys, columns from left, columns from right
     val (projectList, hiddenList) = joinType match {
       case LeftOuter =>
-        (leftKeys ++ lUniqueOutput ++ rUniqueOutput.map(_.withNullability(true)), rightKeys)
+        (leftKeys ++ lUniqueOutput ++ rUniqueOutput.map(_.withNullability(true)),
+          rightKeys.map(_.withNullability(true)))
       case LeftExistence(_) =>
         (leftKeys ++ lUniqueOutput, Seq.empty)
       case RightOuter =>
-        (rightKeys ++ lUniqueOutput.map(_.withNullability(true)) ++ rUniqueOutput, leftKeys)
+        (rightKeys ++ lUniqueOutput.map(_.withNullability(true)) ++ rUniqueOutput,
+          leftKeys.map(_.withNullability(true)))
       case FullOuter =>
         // in full outer join, joinCols should be non-null if there is.
         val joinedCols = joinPairs.map { case (l, r) => Alias(Coalesce(Seq(l, r)), l.name)() }
         (joinedCols ++
           lUniqueOutput.map(_.withNullability(true)) ++
           rUniqueOutput.map(_.withNullability(true)),
-          leftKeys ++ rightKeys)
+          leftKeys.map(_.withNullability(true)) ++
+          rightKeys.map(_.withNullability(true)))
       case _ : InnerLike =>
         (leftKeys ++ lUniqueOutput ++ rUniqueOutput, rightKeys)
       case _ =>
