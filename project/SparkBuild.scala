@@ -79,6 +79,9 @@ object BuildCommons {
   val testTempDir = s"$sparkHome/target/tmp"
 
   val javaVersion = settingKey[String]("source and target JVM version for javac and scalac")
+
+  // SPARK-42188: needs to be consistent with `protobuf.version` in `pom.xml`.
+  val protoVersion = "2.5.0"
 }
 
 object SparkBuild extends PomBuild {
@@ -595,8 +598,8 @@ object DockerIntegrationTests {
 }
 
 /**
- * These settings run a hardcoded configuration of the Kubernetes integration tests using
- * minikube. Docker images will have the "dev" tag, and will be overwritten every time the
+ * These settings run the Kubernetes integration tests.
+ * Docker images will have the "dev" tag, and will be overwritten every time the
  * integration tests are run. The integration tests are actually bound to the "test" phase,
  * so running "test" on this module will run the integration tests.
  *
@@ -614,8 +617,10 @@ object KubernetesIntegrationTests {
 
   val dockerBuild = TaskKey[Unit]("docker-imgs", "Build the docker images for ITs.")
   val runITs = TaskKey[Unit]("run-its", "Only run ITs, skip image build.")
-  val imageTag = settingKey[String]("Tag to use for images built during the test.")
-  val namespace = settingKey[String]("Namespace where to run pods.")
+  val imageRepo = sys.props.getOrElse("spark.kubernetes.test.imageRepo", "docker.io/kubespark")
+  val imageTag = sys.props.get("spark.kubernetes.test.imageTag")
+  val namespace = sys.props.get("spark.kubernetes.test.namespace")
+  val deployMode = sys.props.get("spark.kubernetes.test.deployMode")
 
   // Hack: this variable is used to control whether to build docker images. It's updated by
   // the tasks below in a non-obvious way, so that you get the functionality described in
@@ -623,21 +628,27 @@ object KubernetesIntegrationTests {
   private var shouldBuildImage = true
 
   lazy val settings = Seq(
-    imageTag := "dev",
-    namespace := "default",
     dockerBuild := {
       if (shouldBuildImage) {
         val dockerTool = s"$sparkHome/bin/docker-image-tool.sh"
         val bindingsDir = s"$sparkHome/resource-managers/kubernetes/docker/src/main/dockerfiles/spark/bindings"
-        val cmd = Seq(dockerTool, "-m",
-          "-t", imageTag.value,
+        val cmd = Seq(dockerTool,
+          "-r", imageRepo,
+          "-t", imageTag.getOrElse("dev"),
           "-p", s"$bindingsDir/python/Dockerfile",
-          "-R", s"$bindingsDir/R/Dockerfile",
+          "-R", s"$bindingsDir/R/Dockerfile") ++
+          (if (deployMode != Some("minikube")) Seq.empty else Seq("-m")) :+
           "build"
-        )
         val ec = Process(cmd).!
         if (ec != 0) {
           throw new IllegalStateException(s"Process '${cmd.mkString(" ")}' exited with $ec.")
+        }
+        if (deployMode == Some("cloud")) {
+          val cmd = Seq(dockerTool, "-r", imageRepo, "-t", imageTag.getOrElse("dev"), "push")
+          val ret = Process(cmd).!
+          if (ret != 0) {
+            throw new IllegalStateException(s"Process '${cmd.mkString(" ")}' exited with $ret.")
+          }
         }
       }
       shouldBuildImage = true
@@ -650,11 +661,12 @@ object KubernetesIntegrationTests {
     }.value,
     (Test / test) := (Test / test).dependsOn(dockerBuild).value,
     (Test / javaOptions) ++= Seq(
-      "-Dspark.kubernetes.test.deployMode=minikube",
-      s"-Dspark.kubernetes.test.imageTag=${imageTag.value}",
-      s"-Dspark.kubernetes.test.namespace=${namespace.value}",
+      s"-Dspark.kubernetes.test.deployMode=${deployMode.getOrElse("minikube")}",
+      s"-Dspark.kubernetes.test.imageRepo=${imageRepo}",
+      s"-Dspark.kubernetes.test.imageTag=${imageTag.getOrElse("dev")}",
       s"-Dspark.kubernetes.test.unpackSparkDir=$sparkHome"
     ),
+    (Test / javaOptions) ++= namespace.map("-Dspark.kubernetes.test.namespace=" + _),
     // Force packaging before building images, so that the latest code is tested.
     dockerBuild := dockerBuild
       .dependsOn(assembly / Compile / packageBin)
@@ -667,10 +679,13 @@ object KubernetesIntegrationTests {
  * Overrides to work around sbt's dependency resolution being different from Maven's.
  */
 object DependencyOverrides {
+  import BuildCommons.protoVersion
+
   lazy val guavaVersion = sys.props.get("guava.version").getOrElse("14.0.1")
   lazy val settings = Seq(
     dependencyOverrides += "com.google.guava" % "guava" % guavaVersion,
-    dependencyOverrides += "xerces" % "xercesImpl" % "2.12.0",
+    dependencyOverrides += "com.google.protobuf" % "protobuf-java" % protoVersion,
+    dependencyOverrides += "xerces" % "xercesImpl" % "2.12.2",
     dependencyOverrides += "jline" % "jline" % "2.14.6",
     dependencyOverrides += "org.apache.avro" % "avro" % "1.10.2")
 }

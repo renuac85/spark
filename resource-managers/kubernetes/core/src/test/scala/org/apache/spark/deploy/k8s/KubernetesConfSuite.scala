@@ -170,4 +170,24 @@ class KubernetesConfSuite extends SparkFunSuite {
         "executorEnvVars4-var4" -> "executorEnvVars4",
         "executorEnvVars5-var5" -> "executorEnvVars5/var5"))
   }
+
+  test("SPARK-37735: access appId in KubernetesConf") {
+    val sparkConf = new SparkConf(false)
+    val driverConf = KubernetesTestConf.createDriverConf(sparkConf)
+    val execConf = KubernetesTestConf.createExecutorConf(sparkConf)
+    assert(driverConf.asInstanceOf[KubernetesConf].appId === KubernetesTestConf.APP_ID)
+    assert(execConf.asInstanceOf[KubernetesConf].appId === KubernetesTestConf.APP_ID)
+  }
+
+  test("SPARK-40869: Resource name prefix should not start with a hyphen") {
+    assert(KubernetesConf.getResourceNamePrefix("_hello_").startsWith("hello"))
+  }
+
+  test("SPARK-42906: Resource name prefix should start with an alphabetic character") {
+    // scalastyle:off nonascii
+    Seq("你好-123", "---123", "123---", "------", "123456").foreach { appName =>
+    // scalastyle:on nonascii
+      assert(KubernetesConf.getResourceNamePrefix(appName).matches("[a-z]([-a-z0-9]*[a-z0-9])?"))
+    }
+  }
 }

@@ -19,6 +19,7 @@ package org.apache.spark.deploy.k8s.features
 import scala.collection.JavaConverters._
 
 import io.fabric8.kubernetes.api.model.{ContainerPort, ContainerPortBuilder, LocalObjectReferenceBuilder, Quantity}
+import org.apache.hadoop.fs.{LocalFileSystem, Path}
 
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.apache.spark.deploy.k8s.{KubernetesTestConf, SparkPod}
@@ -38,8 +39,8 @@ class BasicDriverFeatureStepSuite extends SparkFunSuite {
   private val CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent"
   private val DRIVER_ANNOTATIONS = Map("customAnnotation" -> "customAnnotationValue")
   private val DRIVER_ENVS = Map(
-    "customDriverEnv1" -> "customDriverEnv2",
-    "customDriverEnv2" -> "customDriverEnv2")
+    "customDriverEnv1" -> "customDriverEnv1Value",
+    "customDriverEnv2" -> "customDriverEnv2Value")
   private val TEST_IMAGE_PULL_SECRETS = Seq("my-secret-1", "my-secret-2")
   private val TEST_IMAGE_PULL_SECRET_OBJECTS =
     TEST_IMAGE_PULL_SECRETS.map { secret =>
@@ -90,7 +91,7 @@ class BasicDriverFeatureStepSuite extends SparkFunSuite {
       .map { env => (env.getName, env.getValue) }
       .toMap
     DRIVER_ENVS.foreach { case (k, v) =>
-      assert(envs(v) === v)
+      assert(envs(k) === v)
     }
     assert(envs(ENV_SPARK_USER) === Utils.getCurrentUserName())
     assert(envs(ENV_APPLICATION_ID) === kubernetesConf.appId)
@@ -232,6 +233,33 @@ class BasicDriverFeatureStepSuite extends SparkFunSuite {
     assert(portMap2(BLOCK_MANAGER_PORT_NAME) === 1235)
   }
 
+  test("SPARK-40817: Check that remote JARs do not get discarded in spark.jars") {
+    val FILE_UPLOAD_PATH = "s3a://some-bucket/upload-path"
+    val REMOTE_JAR_URI = "s3a://some-bucket/my-application.jar"
+    val LOCAL_JAR_URI = "/tmp/some-local-jar.jar"
+
+    val sparkConf = new SparkConf()
+      .set(CONTAINER_IMAGE, "spark-driver:latest")
+      .set(JARS, Seq(REMOTE_JAR_URI, LOCAL_JAR_URI))
+      .set(KUBERNETES_FILE_UPLOAD_PATH, FILE_UPLOAD_PATH)
+      // Instead of using the real S3A Hadoop driver, use a fake local one
+      .set("spark.hadoop.fs.s3a.impl", classOf[TestFileSystem].getCanonicalName)
+      .set("spark.hadoop.fs.s3a.impl.disable.cache", "true")
+    val kubernetesConf = KubernetesTestConf.createDriverConf(sparkConf = sparkConf)
+    val featureStep = new BasicDriverFeatureStep(kubernetesConf)
+
+    val sparkJars = featureStep.getAdditionalPodSystemProperties()(JARS.key).split(",")
+
+    // Both the remote and the local JAR should be there
+    assert(sparkJars.size == 2)
+    // The remote JAR path should have been left untouched
+    assert(sparkJars.contains(REMOTE_JAR_URI))
+    // The local JAR should have been uploaded to spark.kubernetes.file.upload.path
+    assert(!sparkJars.contains(LOCAL_JAR_URI))
+    assert(sparkJars.exists(path =>
+      path.startsWith(FILE_UPLOAD_PATH) && path.endsWith("some-local-jar.jar")))
+  }
+
   def containerPort(name: String, portNumber: Int): ContainerPort =
     new ContainerPortBuilder()
       .withName(name)
@@ -240,4 +268,17 @@ class BasicDriverFeatureStepSuite extends SparkFunSuite {
       .build()
 
   private def amountAndFormat(quantity: Quantity): String = quantity.getAmount + quantity.getFormat
+}
+
+/**
+ * No-op Hadoop FileSystem
+ */
+private class TestFileSystem extends LocalFileSystem {
+  override def copyFromLocalFile(
+    delSrc: Boolean,
+    overwrite: Boolean,
+    src: Path,
+    dst: Path): Unit = {}
+
+  override def mkdirs(path: Path): Boolean = true
 }

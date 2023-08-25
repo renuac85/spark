@@ -288,6 +288,24 @@ class DataFrameJoinSuite extends QueryTest
     }
   }
 
+  Seq("left_semi", "left_anti").foreach { joinType =>
+    test(s"SPARK-41162: $joinType self-joined aggregated dataframe") {
+      // aggregated dataframe
+      val ids = Seq(1, 2, 3).toDF("id").distinct()
+
+      // self-joined via joinType
+      val result = ids.withColumn("id", $"id" + 1)
+        .join(ids, usingColumns = Seq("id"), joinType = joinType).collect()
+
+      val expected = joinType match {
+        case "left_semi" => 2
+        case "left_anti" => 1
+        case _ => -1  // unsupported test type, test will always fail
+      }
+      assert(result.length == expected)
+    }
+  }
+
   def extractLeftDeepInnerJoins(plan: LogicalPlan): Seq[LogicalPlan] = plan match {
     case j @ Join(left, right, _: InnerLike, _, _) => right +: extractLeftDeepInnerJoins(left)
     case Filter(_, child) => extractLeftDeepInnerJoins(child)
@@ -495,6 +513,28 @@ class DataFrameJoinSuite extends QueryTest
           Row(2, 2, 2, 2, 2),
           Row(3, 3, 1, null, null),
           Row(3, 3, 2, null, null)
+        )
+      )
+    }
+  }
+
+  test("SPARK-39376: Hide duplicated columns in star expansion of subquery alias from USING JOIN") {
+    val joinDf = testData2.as("testData2").join(
+      testData3.as("testData3"), usingColumns = Seq("a"), joinType = "fullouter")
+    val equivalentQueries = Seq(
+      joinDf.select($"*"),
+      joinDf.as("r").select($"*"),
+      joinDf.as("r").select($"r.*")
+    )
+    equivalentQueries.foreach { query =>
+      checkAnswer(query,
+        Seq(
+          Row(1, 1, null),
+          Row(1, 2, null),
+          Row(2, 1, 2),
+          Row(2, 2, 2),
+          Row(3, 1, null),
+          Row(3, 2, null)
         )
       )
     }

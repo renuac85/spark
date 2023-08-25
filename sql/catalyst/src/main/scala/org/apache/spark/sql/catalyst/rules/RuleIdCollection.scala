@@ -87,6 +87,7 @@ object RuleIdCollection {
       "org.apache.spark.sql.catalyst.analysis.ResolveLambdaVariables" ::
       "org.apache.spark.sql.catalyst.analysis.ResolveTimeZone" ::
       "org.apache.spark.sql.catalyst.analysis.ResolveUnion" ::
+      "org.apache.spark.sql.catalyst.analysis.SessionWindowing" ::
       "org.apache.spark.sql.catalyst.analysis.SubstituteUnresolvedOrdinals" ::
       "org.apache.spark.sql.catalyst.analysis.TimeWindowing" ::
       "org.apache.spark.sql.catalyst.analysis.TypeCoercionBase$CombinedTypeCoercionRule" ::
@@ -148,7 +149,6 @@ object RuleIdCollection {
       "org.apache.spark.sql.catalyst.optimizer.SimplifyCaseConversionExpressions" ::
       "org.apache.spark.sql.catalyst.optimizer.SimplifyCasts" ::
       "org.apache.spark.sql.catalyst.optimizer.SimplifyConditionals" ::
-      "org.apache.spark.sql.catalyst.optimizer.SimplifyConditionalsInPredicate" ::
       "org.apache.spark.sql.catalyst.optimizer.SimplifyExtractValueOps" ::
       "org.apache.spark.sql.catalyst.optimizer.TransposeWindow" ::
       "org.apache.spark.sql.catalyst.optimizer.UnwrapCastInBinaryComparison" ::  Nil

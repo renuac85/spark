@@ -1130,11 +1130,7 @@ private[spark] class DAGScheduler(
   }
 
   private[scheduler] def handleBeginEvent(task: Task[_], taskInfo: TaskInfo): Unit = {
-    // Note that there is a chance that this task is launched after the stage is cancelled.
-    // In that case, we wouldn't have the stage anymore in stageIdToStage.
-    val stageAttemptId =
-      stageIdToStage.get(task.stageId).map(_.latestInfo.attemptNumber).getOrElse(-1)
-    listenerBus.post(SparkListenerTaskStart(task.stageId, stageAttemptId, taskInfo))
+    listenerBus.post(SparkListenerTaskStart(task.stageId, task.stageAttemptId, taskInfo))
   }
 
   private[scheduler] def handleSpeculativeTaskSubmitted(task: Task[_]): Unit = {
@@ -2528,7 +2524,7 @@ private[spark] class DAGScheduler(
     // If the RDD has some placement preferences (as is the case for input RDDs), get those
     val rddPrefs = rdd.preferredLocations(rdd.partitions(partition)).toList
     if (rddPrefs.nonEmpty) {
-      return rddPrefs.map(TaskLocation(_))
+      return rddPrefs.filter(_ != null).map(TaskLocation(_))
     }
 
     // If the RDD has narrow dependencies, pick the first partition of the first narrow dependency
